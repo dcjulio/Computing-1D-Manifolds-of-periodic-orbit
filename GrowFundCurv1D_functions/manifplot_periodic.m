@@ -22,6 +22,7 @@ function h=manifplot_periodic(manif)
     plot3(per_orbit.x,per_orbit.y,per_orbit.z,'*')
     hold on
     
+%%
    %plot each branch
     if isfield(manif.points{1},'pos')
         for i=1:period
@@ -49,31 +50,51 @@ function h=manifplot_periodic(manif)
         dcm.UpdateFcn = @(obj, event) myCustomDataTip(obj, event);
     end
 
+%%
+    % To plot each fundamental domain in different colour
+    if isfield(manif.points{1},'pos')
+        for i=1:period
+            nRows = size(manif.points{i}.pos.idx_fund_dom, 1);
+            idxs=[0 0];
+            for r=1:nRows
+                idxs=manif.points{i}.pos.idx_fund_dom(r,:);
+                h=plot3(manif.points{i}.pos.x(idxs(1):idxs(2)),manif.points{i}.pos.y(idxs(1):idxs(2)),manif.points{i}.pos.z(idxs(1):idxs(2)),'LineWidth',2);
+                branch_name=sprintf('%s pos fund_dom: %i ',manif.points{i}.name,r);
+                h.UserData.branch_name = strrep(branch_name, '_', '\_');
+            end
+                h=plot3(manif.points{i}.pos.x(idxs(2)+1:end),manif.points{i}.pos.y(idxs(2)+1:end),manif.points{i}.pos.z(idxs(2)+1:end),'LineWidth',2);
+                branch_name=sprintf('%s pos fund_dom: %i ',manif.points{i}.name,r+1);
+                h.UserData.branch_name = strrep(branch_name, '_', '\_');
+        end
+        % Enable data cursor mode
+        dcm = datacursormode(gcf);
+        dcm.Enable = 'on';
+        % Custom update function for the data tip
+        dcm.UpdateFcn = @(obj, event) myCustomDataTip(obj, event);
 
-    % % To plot each fundamental domain in different colour
-    % if isfield(manif.points{1},'pos')
-    %     for i=1:period
-    %         nRows = size(manif.points{i}.pos.idx_fund_dom, 1);
-    %         idx=[0 0];
-    %         for r=1:nRows
-    %             idx=manif.points{i}.pos.idx_fund_dom(r,:);
-    %             plot3(manif.points{i}.pos.x(idx(1):idx(2)),manif.points{i}.pos.y(idx(1):idx(2)),manif.points{i}.pos.z(idx(1):idx(2)),'LineWidth',2)
-    %         end
-    %             plot3(manif.points{i}.pos.x(idx(2)+1:end),manif.points{i}.pos.y(idx(2)+1:end),manif.points{i}.pos.z(idx(2)+1:end),'LineWidth',2)
-    %     end
-    % end
-    % if isfield(manif.points{1},'neg')
-    %     for i=1:period
-    %         nRows = size(manif.points{i}.neg.idx_fund_dom, 1);
-    %         idx=[0 0];
-    %         for r=1:nRows
-    %             idx=manif.points{i}.neg.idx_fund_dom(r,:);
-    %             plot3(manif.points{i}.neg.x(idx(1):idx(2)),manif.points{i}.neg.y(idx(1):idx(2)),manif.points{i}.neg.z(idx(1):idx(2)),'LineWidth',2)
-    %         end
-    %             plot3(manif.points{i}.neg.x(idx(2)+1:end),manif.points{i}.neg.y(idx(2)+1:end),manif.points{i}.neg.z(idx(2)+1:end),'LineWidth',2)
-    %     end
-    % end
+    end
+    if isfield(manif.points{1},'neg')
+        for i=1:period
+            nRows = size(manif.points{i}.neg.idx_fund_dom, 1);
+            idxs=[0 0];
+            for r=1:nRows
+                idxs=manif.points{i}.neg.idx_fund_dom(r,:);
+                h=plot3(manif.points{i}.neg.x(idxs(1):idxs(2)),manif.points{i}.neg.y(idxs(1):idxs(2)),manif.points{i}.neg.z(idxs(1):idxs(2)),'LineWidth',2);
+                branch_name=sprintf('%s neg fund_dom: %i ',manif.points{i}.name,r);
+                h.UserData.branch_name = strrep(branch_name, '_', '\_');
+            end
+                h=plot3(manif.points{i}.neg.x(idxs(2)+1:end),manif.points{i}.neg.y(idxs(2)+1:end),manif.points{i}.neg.z(idxs(2)+1:end),'LineWidth',2);
+                branch_name=sprintf('%s neg fund_dom: %i ',manif.points{i}.name,r+1);
+                h.UserData.branch_name = strrep(branch_name, '_', '\_');
+        end
+        % Enable data cursor mode
+        dcm = datacursormode(gcf);
+        dcm.Enable = 'on';
+        % Custom update function for the data tip
+        dcm.UpdateFcn = @(obj, event) myCustomDataTip(obj, event);
+    end
 
+    %%
     for k=1:period
         text(per_orbit.x(k),per_orbit.y(k),per_orbit.z(k),sprintf('%s', strrep(manif.points{k}.name,'_','\_')))
     end
@@ -81,7 +102,6 @@ function h=manifplot_periodic(manif)
     
     if isfield(manif,'inter')
         angle=str2num(manif.inter.angle(1:end-2))*pi;
-
         % % %-- intersection points
         if isfield(manif.points{1},'pos')
 
@@ -90,9 +110,11 @@ function h=manifplot_periodic(manif)
                 y=manif.inter.points{k}.pos.y;
                 z=manif.inter.points{k}.pos.z;
 
-                h = plot3(x,y,z,'.','color',RGB2*0.7,'MarkerSize',11);
-                % Attach custom data
-                h.UserData.branch_name = strrep([manif.points{k}.name 'pos'], '_', '\_');
+                if numel(x)>0
+                    h = plot3(x,y,z,'.','color',RGB2*0.7,'MarkerSize',11);
+                    % Attach custom data
+                    h.UserData.branch_name = strrep([manif.points{k}.name 'pos'], '_', '\_');
+                end
 
             end
             
@@ -110,9 +132,11 @@ function h=manifplot_periodic(manif)
                 y=manif.inter.points{k}.neg.y;
                 z=manif.inter.points{k}.neg.z;
 
-                h = plot3(x,y,z,'.','color',RGB2*0.7,'MarkerSize',11);
-                % Attach custom data
-                h.UserData.branch_name = strrep([manif.points{k}.name 'neg'], '_', '\_');
+                if numel(x)>0
+                    h = plot3(x,y,z,'.','color',RGB2*0.7,'MarkerSize',11);
+                    % Attach custom data
+                    h.UserData.branch_name = strrep([manif.points{k}.name 'neg'], '_', '\_');
+                end
             end
             
             % Enable data cursor mode
