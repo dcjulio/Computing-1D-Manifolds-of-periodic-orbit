@@ -366,12 +366,12 @@ while iter < manif.grow_info.max_funditer && sum(stop_arc) ~= period && (sum(sto
      %% Replace first point of the current mapped segment by the last point of the previous segment (continuous manifold)
      % and monitoring the distance between first point of the mapped points and the last point of previous fundamental domain on that branch
 
-    if numel(Manif.points.(branch).x) > 0 % there has to be a segment already on the branch to check for the distance
-        dist = sqrt((Manif.points.(branch).x(end) - mappoints.x(1))^2 +...
-                    (Manif.points.(branch).y(end) - mappoints.y(1))^2 +...
-                    (Manif.points.(branch).z(end) - mappoints.z(1))^2);
+    if numel(Manif.points{idx_seg}.(branch).x) > 0 % there has to be a segment already on the branch to check for the distance
+        dist = sqrt((Manif.points{idx_seg}.(branch).x(end) - mappoints.x(1))^2 +...
+                    (Manif.points{idx_seg}.(branch).y(end) - mappoints.y(1))^2 +...
+                    (Manif.points{idx_seg}.(branch).z(end) - mappoints.z(1))^2);
 
-         fprintf('dist %.e)\n', dist)
+         fprintf('dist %.e\n', dist)
 
          %replace the first point of the mapped points by the last point of the previous segment
          mappoints.x(1) = Manif.points{idx_seg}.(branch).x(end);
