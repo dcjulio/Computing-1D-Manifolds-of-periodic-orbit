@@ -17,7 +17,7 @@
     %--- Information of the system
     opts.thesystem=StdHenon3D_periodic; % What is the name of the system file
     opts.par=struct('a', 4.2,'b', 0.3, 'xi', 1.6); % The parameter values and names (has to match with the names defined in StdHenon3D)
-    opts.user_arclength = 1000; % What is the approximate arclength of the manifold
+    opts.user_arclength = 500; % What is the approximate arclength of the manifold
     opts.per_orbit.name ='p6';
     opts.per_orbit.coord = struct('x',p6_x,'y',p6_y,'z',p6_z);
     opts.stability='Smanifold';
