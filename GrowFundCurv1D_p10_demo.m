@@ -2,11 +2,6 @@
 % give an approximate and find with newton the true %% easiest
 % ask for all periodic points of certain period %% a tiny bit harder
 
-
-%%
-%- Check that the distance between the refined manifold to the end of initial segment is less than init_step^2
-%- Check that the angle at the joining manifold fulfills the acc conditions
-
 %% Adding the path
     clear all
     close all
@@ -14,23 +9,18 @@
 
 %% Options
 
-    %--- Define coordinates of the periodic orbit in original coordinates
-    % % % orientation-reversing period-three orbit
-    p3_x = [2.620266326709355, -2.2163325979982256, -1.4982100829623703];
-    p3_y = [-2.2163325979982256, -1.4982100829623703, 2.620266326709355];
-    p3_z = [3.2542647169820524, 1.6887850623802372, 0.5283319918939143];
-
-    % % orientation-preserving period-three orbit
-    % p3_x = [2.269075165256071, -1.408946374686311, 1.5341475636814805];
-    % p3_y = [-1.408946374686311, 1.5341475636814805, 2.269075165256071];
-    % p3_z = [-2.8587492611614835, -4.8394454880800915, -4.273187022014629];
+    % %--- Define coordinates of the periodic orbit in original coordinates
+    % orientation-reversing
+    p10_x = [1.80883613823861	1.46213628176954	1.51950665206156	1.45245864980980	1.63451187497422	1.09263333562531	2.51579883138804	-2.45703376070103	-2.59175455064107	-1.78008152255837];
+    p10_y = [1.46213628176954	1.51950665206156	1.45245864980980	1.63451187497422	1.09263333562531	2.51579883138804	-2.45703376070103	-2.59175455064107	-1.78008152255837	1.80883613823861];
+    p10_z = [-4.58293490032142	-4.03738559861616	-3.32535606627784	-2.53796862972360	-1.41105048069410	-0.600627241207610	1.79504614193891	-0.302978390374339	-2.95532861909027	-5.32647586546669];
 
     %--- Information of the system
     opts.thesystem=StdHenon3D_periodic; % What is the name of the system file
     opts.par=struct('a', 4.2,'b', 0.3, 'xi', 1.2); % The parameter values and names (has to match with the names defined in StdHenon3D)
-    opts.user_arclength=10; % What is the approximate arclength of the manifold
-    opts.per_orbit.name ='p3';
-    opts.per_orbit.coord = struct('x',p3_x,'y',p3_y,'z',p3_z);
+    opts.user_arclength = 10; % What is the approximate arclength of the manifold
+    opts.per_orbit.name ='p10';
+    opts.per_orbit.coord = struct('x',p10_x,'y',p10_y,'z',p10_z);
     opts.stability='Smanifold';
 
     %--- Number of iterations used to compute the manifold
@@ -43,20 +33,15 @@
     %opts.accpar.deltamax=0.01;  
 
     %--- Initial step (default)
-    opts.accpar.init_step=10^-8;
+    %opts.accpar.init_step=10^-7; % pos value is positive branch and viceversa
 
-%% Computing the manifold
+%% Computing the manifold: Ws(pmin) orientation-preserving
+     opts.branch = 'pos'; %which branch: 'pos', 'neg' or '' to consider sign of initial step.
+     manif=GrowFundCurv1D_periodic(opts);
 
-    opts.branch = 'pos'; %which branch: 'pos', 'neg' or '' to consider sign of initial step.
-    manif = GrowFundCurv1D_periodic(opts);
-
-    %% Add another branch
-    manif = add_branch_periodic(manif, opts, 'neg');
-
-    %% Computing intersection points
+%% Computing intersection points
     angle=pi/2; %the angle of the plane from [-pi, pi]. (angle=pi/2: x==0 (y>0), angle=0: y==0 (x>0))
     manif=inter_plane_periodic(manif,angle);
-
 %% Plot
     manifplot_periodic(manif);
 

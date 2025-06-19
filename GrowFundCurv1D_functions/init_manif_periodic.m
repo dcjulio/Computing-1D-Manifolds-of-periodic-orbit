@@ -83,25 +83,26 @@ manif.per_orbit.coord_original=opts.per_orbit.coord;
 manif.per_orbit.coord_compactified=thesystem.compactify(opts.per_orbit.coord); %periodic orbit in compactified coordinates
 
 % eigensystem
-[manif.per_orbit.eigval,manif.per_orbit.eigvec_x0]=eigensystem(opts.per_orbit.coord,opts);
+[manif.per_orbit.eigval,manif.per_orbit.eigvec_x0]=eigensystem(opts.per_orbit.coord,opts,0);
 eigval=manif.per_orbit.eigval;
 eigvec_x0=manif.per_orbit.eigvec_x0;
 
+
 % computes the dimension and orientation properties of the stable manifold
 manif.per_orbit.Smanifold.dimension=sum(abs(eigval)<1);
-manif.per_orbit.Smanifold.orientability=orientability(eigval,'Smanifold');
+manif.per_orbit.Smanifold.orientability=orientability(eigval,'Smanifold',opts);
 manif.per_orbit.Smanifold.eigval=eigval(abs(eigval)<1);
 manif.per_orbit.Smanifold.eigvec_x0=eigvec_x0(abs(eigval)<1,:);
 
 % computes the dimension and orientation properties of the unstable manifold
 manif.per_orbit.Umanifold.dimension=sum(abs(eigval)>1);
-manif.per_orbit.Umanifold.orientability=orientability(eigval,'Umanifold');
+manif.per_orbit.Umanifold.orientability=orientability(eigval,'Umanifold',opts);
 manif.per_orbit.Umanifold.eigval=eigval(abs(eigval)>1);
 manif.per_orbit.Umanifold.eigvec=eigvec_x0(abs(eigval)>1,:);
 
 % computes the dimension and orientation properties of the stable manifold
 manif.per_orbit.Smanifold.dimension=sum(abs(eigval)<1);
-manif.per_orbit.Smanifold.orientability=orientability(eigval,'Smanifold');
+manif.per_orbit.Smanifold.orientability=orientability(eigval,'Smanifold',opts);
 if strcmp(opts.stability,'Smanifold')
     manif.dimension=manif.per_orbit.Smanifold.dimension;
     manif.orientability=manif.per_orbit.Smanifold.orientability;
@@ -109,7 +110,7 @@ end
 
 % computes the dimension and orientation properties of the unstable manifold
 manif.per_orbit.Umanifold.dimension=sum(abs(eigval)>1);
-manif.per_orbit.Umanifold.orientability=orientability(eigval,'Umanifold');
+manif.per_orbit.Umanifold.orientability=orientability(eigval,'Umanifold',opts);
 if strcmp(opts.stability,'Umanifold')
     manif.dimension=manif.per_orbit.Umanifold.dimension;
     manif.orientability=manif.per_orbit.Umanifold.orientability;
@@ -151,9 +152,12 @@ manif.grow_info.user_arclength=opts.user_arclength;
 %----------------------------------------------
 
 % > --------  eigenvalue and eigenvector in compactified coordinates
-    function [eigval,eigvec_x0]=eigensystem(per_orbit,opts)
+    function [eigval,eigvec_x0]=eigensystem(per_orbit,opts,inv)
     % Input: 
                 % per_orbit: .x, .y and .z coordinatesof the periodic orbit
+                % opts for the name of the system
+                % inv: inverse 1: 'true' or 0: 'false' (for when we obtain a zero for eigenvalue)
+               
     % Output: 
                 % eigval: the eigenvalue of the periodic orbit
                 % eigenval: eigenvalues associated with the first point of the orbit
@@ -165,7 +169,12 @@ manif.grow_info.user_arclength=opts.user_arclength;
     period=numel(per_orbit.x);
     
     %Jacobian J_f of the original system (uncompactified)
-    F  = system.ff(points,opts);
+    if inv == 1
+        F = system.ff_inv(points,opts);
+    else
+        F = system.ff(points,opts);
+    end
+
     JF = jacobian([F.x, F.y, F.z], [x, y, z]);
 
     %Jacobian J_t of the compactification
@@ -184,7 +193,7 @@ manif.grow_info.user_arclength=opts.user_arclength;
         JFk = double(subs(JF))*JFk;
     end
 
-    %Compute the eigenval and eigenvec of the original system JFk(x0)
+    % Compute the eigenval and eigenvec of the original system JFk(x0)
     [eigvecF,D]=eig(JFk);
     eigval=diag(D)';
 
@@ -206,19 +215,25 @@ end
 
 
 % > -------- orientability
-function [orientability]=orientability(eigval,Stab)
+function [orientability]=orientability(eigval,Stab,opts)
+    
+    % If stable manifold, the eigenvalue is less than one and its more numerically unstable. 
+    % Hence, we use the inverserse to get the orientability, less numerical innacuracy to get the sign
+    if strcmp(Stab,'Smanifold') 
+            inv=1; % use the inverse
+            per_orbit = opts.per_orbit.coord;
+            [eigval,~]=eigensystem(per_orbit,opts,inv);
 
-    if strcmp(Stab,'Smanifold')
-        if prod(eigval(abs(eigval) < 1))>0
-            orientability='orientation-preserving';
-        else
-            orientability='orientation-reversing';
-        end
+            if prod(eigval(abs(eigval) > 1)) > 0
+                orientability='orientation-preserving';
+            else
+                orientability='orientation-reversing';
+            end
     end
 
 
     if strcmp(Stab,'Umanifold')
-        if prod(eigval(abs(eigval) > 1))>0
+        if prod(eigval(abs(eigval) > 1)) > 0
             orientability='orientation-preserving';
         else
             orientability='orientation-reversing';

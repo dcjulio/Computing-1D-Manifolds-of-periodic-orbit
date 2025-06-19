@@ -43,7 +43,7 @@ orbit.y(1)=PO.y;
 orbit.z(1)=PO.z;
 
 distance=sum(sqrt((PO_uncomp.x-orbit.x).^2+(PO_uncomp.y-orbit.y).^2+(PO_uncomp.z-orbit.z).^2));
-if distance > 10^-6
+if distance > 10^-3%manif.grow_info.deltamin
     fprintf('\n----  Error! The periodic orbit appears to be incorrect.\n The distances between the given orbit and the iterations from the first point are:\n');
     for k=1:period
         disp(sqrt((PO_uncomp.x(k)-orbit.x(k)).^2+(PO_uncomp.y(k)-orbit.y(k)).^2+(PO_uncomp.z(k)-orbit.z(k)).^2))
@@ -151,39 +151,37 @@ if manif.grow_info.eigvec(1) < 0 % is it is going to negative x, then consider t
 end
 
 % Choosing the initial distance correctly:
-% at what distance from the fix point the fundamental domain starts so 
-% the end of the fundamental domain is approx at distance: opts.accpar.init_step
-% we assume the linearlize system to do the calculation
+% To avoid problems when the contraction/expansion rate is too strong/weak,
+% We define an starting segment from the periodic point up to opts.accpar.init_step
+% Then, we iterate that starting piece until it returns. 
+% When it returns, we define the first fundamental domain.
 
-% distance scaled by the expansion/contraction-rate (eigenvalue)
-    if strcmp(manif.stability,'Smanifold')
-        dist = manif.grow_info.init_step*abs(manif.grow_info.eigval^mapiter);
-    elseif strcmp(manif.stability,'Umanifold')
-        dist = manif.grow_info.init_step/abs(manif.grow_info.eigval^mapiter);
-    end
 
-% starting point of the fundamental domain
-fund_init.x= per_orbit.x(1)+dist*manif.grow_info.eigvec(1);
-fund_init.y= per_orbit.y(1)+dist*manif.grow_info.eigvec(2);
-fund_init.z= per_orbit.z(1)+dist*manif.grow_info.eigvec(3);
+% starting point of the initial segment is the periodic point
+segment_init.x= per_orbit.x(1);
+segment_init.y= per_orbit.y(1);
+segment_init.z= per_orbit.z(1);
 
-% mapping the initial point to obtain the first fundamental domain
-fund_end = thesystem.mapping(fund_init,opts,sign*mapiter*period);
+% the final point of the initial segment lies on the linearisation
+dist = manif.grow_info.init_step;
+segment_end.x= per_orbit.x(1)+dist*manif.grow_info.eigvec(1);
+segment_end.y= per_orbit.y(1)+dist*manif.grow_info.eigvec(2);
+segment_end.z= per_orbit.z(1)+dist*manif.grow_info.eigvec(3);
+
 
 
 % interpolate N=4 points linearly
-fund.points.x = linspace(fund_init.x, fund_end.x, 6);
-fund.points.y = linspace(fund_init.y, fund_end.y, 6);
-fund.points.z = linspace(fund_init.z, fund_end.z, 6);
+fund.points.x = linspace(segment_init.x, segment_end.x, 6);
+fund.points.y = linspace(segment_init.y, segment_end.y, 6);
+fund.points.z = linspace(segment_init.z, segment_end.z, 6);
 
 
 fund.points.arc = arclength(fund.points);
 fund.points.idx_fund_dom = [1 numel(fund.points.x)];
 
 
+% Initialize structure of the stored points 
 manif.points=cell(1,period);
-
-
 
 % from the manifold associated to which periodic point the data comes from (which one is their "preimage")
 if strcmp(manif.stability,'Umanifold') % if we are computing Ustable, we use f^1
@@ -259,11 +257,21 @@ elseif strcmp(manif.orientability,'orientation-reversing')
     total_arc_branch1(1) = fund.points.arc(end);
 end
 
-% plot3(fund.points.x,fund.points.y,fund.points.z,'LineWidth',2)
-% plot3(per_orbit.x,per_orbit.y,per_orbit.z,'*')
-%%
 
-fprintf(' Starting fundamental domain arclength  %f\n',fund.points.arc(end))
+%% plot
+% figure
+% hold on
+% plot3(fund.points.x,fund.points.y,fund.points.z,'LineWidth',2)
+% plot3(fund.points.x,fund.points.y,fund.points.z,'k.')
+% plot3(per_orbit.x,per_orbit.y,per_orbit.z,'*')
+% for k=1:period
+%     text(manif.per_orbit.coord_compactified.x(k),manif.per_orbit.coord_compactified.y(k),manif.per_orbit.coord_compactified.z(k),sprintf('%s', strrep(manif.points{k}.name,'_','\_')))
+% end
+% xlabel('x')
+% ylabel('y')
+% zlabel('z')
+
+%%
 
 Manif=manif;
 
@@ -298,20 +306,18 @@ while iter < manif.grow_info.max_funditer && sum(stop_arc) ~= period && (sum(sto
         
           %Chech in which branch are we at
           if strcmp(manif.orientability,'orientation-preserving')
-              branch=branch1;
+              branch = branch1;
           elseif strcmp(manif.orientability,'orientation-reversing')
             if mod(iter,2*period) < period
-                branch=branch1;
+                branch = branch1;
             else
-                branch=branch2;
+                branch = branch2;
             end
           end
 
-
-         %mapping the points
-         mappoints = thesystem.mapping(fund.points,opts,sign);
-
-         idx_eps_preimages=fund.points.idx_fund_dom(1):fund.points.idx_fund_dom(2);
+            %mapping the points
+             mappoints = thesystem.mapping(fund.points,opts,sign);
+             idx_eps_preimages=fund.points.idx_fund_dom(1):fund.points.idx_fund_dom(2);
  
 
      %% STARTING THE ALGORITHM
@@ -367,21 +373,34 @@ while iter < manif.grow_info.max_funditer && sum(stop_arc) ~= period && (sum(sto
      % and monitoring the distance between first point of the mapped points and the last point of previous fundamental domain on that branch
 
     if numel(Manif.points{idx_seg}.(branch).x) > 0 % there has to be a segment already on the branch to check for the distance
-        dist = sqrt((Manif.points{idx_seg}.(branch).x(end) - mappoints.x(1))^2 +...
-                    (Manif.points{idx_seg}.(branch).y(end) - mappoints.y(1))^2 +...
-                    (Manif.points{idx_seg}.(branch).z(end) - mappoints.z(1))^2);
 
-         fprintf('dist %.e\n', dist)
+        % if is the very first time the segment returns to the first computed segment, then just skip this part. 
+        % After refining the new segment it will be chopped to start at the end of the initial segment 
+        if iter ~= period*mapiter % it is not the first time it returns
+            
+            % concatenate the new segments with the previous segment
+            dist = sqrt((Manif.points{idx_seg}.(branch).x(end) - mappoints.x(1))^2 +...
+                        (Manif.points{idx_seg}.(branch).y(end) - mappoints.y(1))^2 +...
+                        (Manif.points{idx_seg}.(branch).z(end) - mappoints.z(1))^2);
+            fprintf('dist %.e\n', dist)
 
-         %replace the first point of the mapped points by the last point of the previous segment
-         mappoints.x(1) = Manif.points{idx_seg}.(branch).x(end);
-         mappoints.y(1) = Manif.points{idx_seg}.(branch).y(end);
-         mappoints.z(1) = Manif.points{idx_seg}.(branch).z(end);
+             %replace the first point of the mapped points by the last point of the previous segment
+             mappoints.x(1) = Manif.points{idx_seg}.(branch).x(end);
+             mappoints.y(1) = Manif.points{idx_seg}.(branch).y(end);
+             mappoints.z(1) = Manif.points{idx_seg}.(branch).z(end);
+    
+             if dist > Manif.grow_info.deltamin
+                 fprintf('Warning! The distance between the first point of the current mapped segment and the last point of the previous segment exceeds Deltamin. Current distance: %.e %.e\n', dist)
+             end
 
-         if dist > Manif.grow_info.deltamin
-             fprintf('Warning! The distance between the first point of the current mapped segment and the last point of the previous segment exceeds Deltamin. Current distance: %.e %.e\n', dist)
-         end
-     end
+        end
+
+    else % if it is the first time we are storing a segment on that branch, the first point is corrected to be exactly the periodic point
+        fprintf('idxseg1 %i',idx_seg)
+        mappoints.x(1) = per_orbit.x(idx_seg);
+        mappoints.y(1) = per_orbit.y(idx_seg);
+        mappoints.z(1) = per_orbit.z(idx_seg);
+    end
 
     %%
     fprintf('\n ITERATION OF THE FUNDAMENTAL DOMAIN %i: ',iter)
@@ -683,6 +702,36 @@ end
     end           % (while loop) Checking acc cond 
 %---%--------------
 
+
+    % Chop the overlaping segment here
+    if iter == period*mapiter
+
+        % plot3(mappoints.x,mappoints.y,mappoints.z,'LineWidth',2)
+        % plot3(mappoints.x,mappoints.y,mappoints.z,'k.')
+
+        % fprintf('\n\nchop chop chop\n\n')
+        dist_init_segment = sqrt((Manif.points{idx_seg}.(branch).x(end) - per_orbit.x(idx_seg))^2 +...
+                                 (Manif.points{idx_seg}.(branch).y(end) - per_orbit.y(idx_seg))^2 +...
+                                 (Manif.points{idx_seg}.(branch).z(end) - per_orbit.z(idx_seg))^2);
+        % fprintf('\n\ndist init segment %e\n\n',dist_init_segment)
+        dist_new_segment = sqrt((mappoints.x - per_orbit.x(idx_seg)).^2 +...
+                                (mappoints.y - per_orbit.y(idx_seg)).^2 +...
+                                (mappoints.z - per_orbit.z(idx_seg)).^2);
+
+        idx = find(dist_new_segment > dist_init_segment,1,'first'); % find first time the dist of the new segment is greater than the last point of previous segment
+        % fprintf('\n\nfirst time index is greater than the last point of the previous segment %i\n\n',idx)
+
+        % make the new segment start at the end of the first intial segment
+        mappoints.x = [Manif.points{idx_seg}.(branch).x(end)  mappoints.x(idx:end)];
+        mappoints.y = [Manif.points{idx_seg}.(branch).y(end)  mappoints.y(idx:end)];
+        mappoints.z = [Manif.points{idx_seg}.(branch).z(end)  mappoints.z(idx:end)];
+        idx_eps_preimages(1:idx-1)=[];
+
+    end
+    % 
+    % plot3(mappoints.x,mappoints.y,mappoints.z,'LineWidth',2)
+    % plot3(mappoints.x,mappoints.y,mappoints.z,'k.')
+
 %---%----------- Final section: save info
 
     fund.points.x=mappoints.x;
@@ -702,8 +751,6 @@ end
     end
 
     fprintf(' Fund domain arclength %.2f \n', fund.points.arc(end));
-
-
 
 
     % obtain the starting index of the fund domain to store. start=1 if is
@@ -765,16 +812,10 @@ end
 
         end
     end
-% plot3(fund.points.x,fund.points.y,fund.points.z,'LineWidth',2)
+
 %---%----------- END Final section: save info
 end
 
-% for k=1:period
-%     text(Manif.per_orbit.coord_compactified.x(k),Manif.per_orbit.coord_compactified.y(k),Manif.per_orbit.coord_compactified.z(k),sprintf('%s', strrep(Manif.points{k}.name,'_','\_')))
-% end
-% xlabel('x')
-% ylabel('y')
-% zlabel('z')
 
 
 %--------------- END adding points
@@ -799,6 +840,10 @@ fprintf('   * %i points removed \n',Manif.grow_info.runinf.rem_deltamin+Manif.gr
 fprintf('   * %i points added from deltamax \n',Manif.grow_info.runinf.add_deltamax) 
 fprintf('   * %i points added from alpha \n',Manif.grow_info.runinf.add_alphamax) 
 fprintf('   * %i points added from delta*alpha \n',Manif.grow_info.runinf.add_deltalphamax) 
+
+if manif.grow_info.eigval(1)==0
+    fprintf('\n\n WARNING! There is a zero Eigenvalue!\n Maybe numerical inaccuracy from a very strong contraction rate\n\n')
+end
 %% FUNCTIONS
 
 function interp = makima3D(points,t,tt)
