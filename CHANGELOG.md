@@ -1,3 +1,2 @@
-### What’s new in v1.1.0
-1. Each new segment is connected to the last segment. We do this by replacing the first point of the new segment with the last point of the previous segment.
-2. If the distance between the last point of the previous segment and the first point of the new segment is greater than Delta_min, then print a WARNING.
+### What’s new in v1.2.0
+1. Updated and redefined how to define the initial segment of the manifold. Now it can handle extreme contraction/expansion rates. Tested up to period 20 orbit of the 3D Henon-like map
